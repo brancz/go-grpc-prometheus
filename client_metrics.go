@@ -103,6 +103,45 @@ func (m *ClientMetrics) StreamClientInterceptor() func(ctx context.Context, desc
 	}
 }
 
+// Register registers all client metrics in a given metrics registry. Depending
+// on histogram options and whether they are enabled, histogram metrics are
+// also registered.
+func (m *ClientMetrics) Register(r prom.Registerer) error {
+	err := r.Register(m.clientStartedCounter)
+	if err != nil {
+		return err
+	}
+	err = r.Register(m.clientHandledCounter)
+	if err != nil {
+		return err
+	}
+	err = r.Register(m.clientStreamMsgReceived)
+	if err != nil {
+		return err
+	}
+	err = r.Register(m.clientStreamMsgSent)
+	if err != nil {
+		return err
+	}
+
+	if m.clientHandledHistogramEnabled {
+		err = r.Register(m.clientHandledHistogram)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// MustRegister tries to register all client metrics and panics on an error.
+func (m *ClientMetrics) MustRegister(r prom.Registerer) {
+	err := m.Register(r)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func clientStreamType(desc *grpc.StreamDesc) grpcType {
 	if desc.ClientStreams && !desc.ServerStreams {
 		return ClientStream
